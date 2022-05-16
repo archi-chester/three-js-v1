@@ -4,7 +4,15 @@ import * as THREE from "./three.module.js";
 export default class {
 
   constructor() {
-    Viewer.init();
+    Viewer.init({
+      renderer: {
+        parent: document.body,
+        antialias: true,
+        alpha: false, //  transparency
+        clearColor: "gray",  // color between frames...
+        pixelRatio: 1, //  (set low 1 if yo wonna decreese GPU power...)
+      }
+    });
     this.createObject();
   }
 
@@ -25,7 +33,7 @@ export default class {
     const that = this;
 
     //  add func to UpdatePool
-    Viewer.setUpdate(
+    Viewer.addUpdate(
       "rotate_object",
       () => that.object.rotation.y += .01
     );

@@ -1,11 +1,26 @@
 import * as THREE from "./three.module.js";
 
 export default {
-  updatePool: {},  //  functions pool for frames
+  resizePool: {},  //  functions pool for resize frames
+  updatePool: {},  //  functions pool for update frames
 
-  init() {
+  //  Add new func to resizePool
+  addResize(name, fc) {
+    this.resizePool[name] = fc;
+  },
+
+  //  Add new func to resizePool
+  addUpdate(name, fc) {
+    this.updatePool[name] = fc;
+  },
+
+  //  CONSTRUCTOR
+  init(data) {
+    //   resizing 
+    this.createResize();
+
     //   create objects
-    this.createRenderer();
+    this.createRenderer(data.renderer);
     this.createCamera();
     this.createScene();
     this.createLight();
@@ -15,27 +30,55 @@ export default {
   },
 
   //  Create Render + Canvas
-  createRenderer() {
-    this.renderer = new THREE.WebGLRenderer();
+  createRenderer(settings) {
+    //  test for renderer existing. If it exist - kill
+    if (this.renderer) {
+      this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
 
-    document.body.appendChild(this.renderer.domElement);
+      //  куьщму акщь ьуьщкн
+      this.renderer.dispose();
+    }
 
-    this.renderer.setSize(document.body.offsetWidth, document.body.offsetHeight);
+    this.renderer = new THREE.WebGLRenderer(settings);
+
+    settings.parent.appendChild(this.renderer.domElement);
+
+    this.renderer.setClearColor(settings.clearColor || "black");
+
+    this.renderer.setPixelRatio(settings.pixelRatio || devicePixelRatio);
+
+    const that = this;
+    //  add func to pool
+    this.addResize("resize_render", () => {
+      that.renderer.setSize(
+        that.renderer.domElement.parentNode.offsetWidth,
+        that.renderer.domElement.parentNode.offsetHeight
+      );
+    });
+
+    this.resizePool["resize_render"]();
+
   },
 
   //  Create Camera
   createCamera() {
+    //  create camera
     this.camera = new THREE.PerspectiveCamera(
       45,
-      document.body.offsetWidth / document.body.offsetHeight,
+      this.renderer.domElement.width / this.renderer.domElement.height,
       1,
       100
     );
-  },
 
-  //  Create Scene
-  createScene() {
-    this.scene = new THREE.Scene();
+    //  save context
+    const that = this;
+
+    //  add resize camera
+    this.addResize("resize_camera", () => {
+			that.camera.aspect = that.renderer.domElement.width/that.renderer.domElement.height;
+			
+			that.camera.updateProjectionMatrix();
+    });
   },
 
   //  Create Light
@@ -45,14 +88,44 @@ export default {
     this.light1.position.set(5, 5, 5);
   },
 
-  //  Add new func to updatePool
-  setUpdate(name, fc) {
-    this.updatePool[name] = fc;
+  //  Resize Frame
+  createResize() {
+    //  save context
+    const that = this;
+
+    //  create listener
+    window.addEventListener("resize", () => that.resize())
+  },
+
+  //  Create Scene
+  createScene() {
+    this.scene = new THREE.Scene();
+  },
+
+  //  Remove func from updatePool
+  removeResize(name) {
+    delete this.updatePool[name];
   },
 
   //  Remove func from updatePool
   removeUpdate(name) {
     delete this.updatePool[name];
+  },
+
+  //  Resize Frame
+  resize() {
+    // this.renderer.render(this.scene, this.camera);
+
+    // const that = this;
+
+    // requestAnimationFrame(() => {
+    //   that.update();
+    // });
+
+    //  run all function when resizing frame
+    for(let key in this.resizePool) {
+      this.resizePool[key]();
+    }
   },
 
   //  Update Frame
